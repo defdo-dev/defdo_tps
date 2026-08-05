@@ -1,0 +1,11 @@
+{
+  "name": "defdo-tps-sidebar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tui": {
+      "import": "./tui.tsx"
+    }
+  }
+}
