@@ -1,32 +1,15 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui"
 import { createMemo, createSignal } from "solid-js"
-
-type StreamSample = {
-  at: number
-  tokens: number
-}
-
-type MessageTiming = {
-  sessionID: string
-  requestStartAt: number
-  firstResponseAt?: number
-  firstTokenAt?: number
-  lastToolCallAt?: number
-}
-
-type SessionAverage = {
-  totalTokens: number
-  totalDurationMs: number
-  totalTtftMs: number
-  messageCount: number
-}
-
-type TrackerState = {
-  streamSamplesBySession: Record<string, StreamSample[]>
-  messageTimingByID: Record<string, MessageTiming>
-  sessionAverageByID: Record<string, SessionAverage>
-}
+import {
+  acceptDelta,
+  clearSessionState,
+  createTrackerState,
+  pruneDeltaState,
+  pruneSessionAverages,
+  type StreamSample,
+  type TrackerState,
+} from "./state"
 
 const STREAM_WINDOW_MS = 5_000
 const LIVE_STALE_MS = 1_500
@@ -84,20 +67,28 @@ function TpsPromptRight(props: {
     return formatTtft(totals.totalTtftMs / totals.messageCount / 1000)
   })
 
+  const lastTps = (sessionID: string) => {
+    const last = props.tracker.lastTpsBySession[sessionID]
+    if (!last) return undefined
+    return formatRate(last.tps)
+  }
+
   const liveTps = createMemo(() => {
     props.version()
     props.clock()
     const status = props.api.state.session.status(props.sessionID)
-    if (status?.type === "idle") return undefined
+    if (status?.type === "idle") return lastTps(props.sessionID)
 
     const samples = props.tracker.streamSamplesBySession[props.sessionID] ?? []
     const now = Date.now()
     const relevant = samples.filter((sample) => now - sample.at <= STREAM_WINDOW_MS)
     const lastSample = relevant[relevant.length - 1]
-    if (!lastSample || now - lastSample.at > LIVE_STALE_MS) return undefined
+    if (!lastSample || now - lastSample.at > LIVE_STALE_MS) return lastTps(props.sessionID)
 
     const tokens = relevant.reduce((sum, sample) => sum + sample.tokens, 0)
-    return formatRate(tokens / (activeDurationMs(relevant, now) / 1000))
+    const tps = tokens / (activeDurationMs(relevant, now) / 1000)
+    props.tracker.lastTpsBySession[props.sessionID] = { tps, at: now }
+    return formatRate(tps)
   })
 
   return (
@@ -108,11 +99,7 @@ function TpsPromptRight(props: {
 }
 
 const tui: TuiPlugin = async (api) => {
-  const tracker: TrackerState = {
-    streamSamplesBySession: {},
-    messageTimingByID: {},
-    sessionAverageByID: {},
-  }
+  const tracker: TrackerState = createTrackerState()
   const [version, setVersion] = createSignal(0)
   const [clock, setClock] = createSignal(Date.now())
 
@@ -151,11 +138,19 @@ const tui: TuiPlugin = async (api) => {
     bump()
   }
 
+  const cleanupSession = (sessionID: string, removeAverage = false) => {
+    const changed = clearSessionState(tracker, sessionID, removeAverage, removeAverage)
+    const deltasPruned = pruneDeltaState(tracker)
+    const averagesPruned = pruneSessionAverages(tracker)
+    if (changed || deltasPruned || averagesPruned) bump()
+  }
+
   const onDelta = api.event.on("message.part.delta", (event) => {
     if (event.properties.field !== "text") return
     const parts = api.state.part(event.properties.messageID)
     const part = parts.find((item) => item.id === event.properties.partID)
     if (!part || (part.type !== "text" && part.type !== "reasoning")) return
+    if (!acceptDelta(tracker, event.properties, part.text, Date.now())) return
 
     appendSample(event.properties.sessionID, event.properties.messageID, {
       at: Date.now(),
@@ -200,6 +195,7 @@ const tui: TuiPlugin = async (api) => {
           totalDurationMs: totals.totalDurationMs + durationMs,
           totalTtftMs: totals.totalTtftMs + ttftMs,
           messageCount: totals.messageCount + 1,
+          lastActivityAt: Date.now(),
         }
       }
     }
@@ -237,22 +233,36 @@ const tui: TuiPlugin = async (api) => {
     }
   })
 
+  const onSessionIdle = api.event.on("session.idle", (event) => {
+    cleanupSession(event.properties.sessionID)
+  })
+
+  const onSessionDeleted = api.event.on("session.deleted", (event) => {
+    cleanupSession(event.properties.sessionID, true)
+  })
+
   const timer = setInterval(() => {
     setClock(Date.now())
     pruneSamples()
+    if (pruneDeltaState(tracker)) bump()
+    if (pruneSessionAverages(tracker)) bump()
   }, 1000)
 
   api.lifecycle.onDispose(() => {
     onDelta()
     onMessage()
     onPart()
+    onSessionIdle()
+    onSessionDeleted()
     clearInterval(timer)
   })
 
   api.slots.register({
     slots: {
       session_prompt_right(_context, value) {
-        return <TpsPromptRight api={api} sessionID={value.session_id} tracker={tracker} version={version} clock={clock} />
+        return (
+          <TpsPromptRight api={api} sessionID={value.session_id} tracker={tracker} version={version} clock={clock} />
+        )
       },
     },
   })
