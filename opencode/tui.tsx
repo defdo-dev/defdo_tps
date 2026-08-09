@@ -1,6 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui"
 import { createMemo, createSignal } from "solid-js"
+import { formatRate, formatTtft } from "../shared/format"
 import {
   acceptDelta,
   clearSessionState,
@@ -17,17 +18,6 @@ const SINGLE_SAMPLE_MS = 1_000
 
 function estimateStreamTokens(delta: string) {
   return Math.max(1, Math.ceil(new TextEncoder().encode(delta).length / 5))
-}
-
-function formatRate(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return undefined
-  const formatted = value >= 100 ? Math.round(value).toString() : value >= 10 ? value.toFixed(1) : value.toFixed(2)
-  return `${formatted} t/s`
-}
-
-function formatTtft(value: number) {
-  if (!Number.isFinite(value) || value < 0) return undefined
-  return `${value.toFixed(1)}s`
 }
 
 function activeDurationMs(samples: StreamSample[], tailAt?: number) {

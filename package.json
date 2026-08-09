@@ -1,11 +1,19 @@
 {
-  "name": "defdo-tps-sidebar",
-  "version": "0.1.0",
+  "name": "defdo-tps",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
-    "./tui": {
-      "import": "./tui.tsx"
+    "./opencode/tui": {
+      "import": "./opencode/tui.tsx"
+    },
+    "./kimi/statusline": {
+      "import": "./kimi/statusline.ts"
     }
+  },
+  "scripts": {
+    "test": "bun test",
+    "build:kimi": "bun build kimi/statusline.ts --compile --outfile $HOME/.kimi-code/defdo-tps-statusline",
+    "verify:opencode": "bun build opencode/tui.tsx --target bun --format esm --external '@opentui/solid' --external '@opencode-ai/plugin/tui' --external 'solid-js' --outfile /tmp/defdo-tps-opencode.js"
   }
 }
