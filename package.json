@@ -12,8 +12,9 @@
     }
   },
   "scripts": {
-    "test": "bun test",
     "build:kimi": "bun build kimi/statusline.ts --compile --outfile $HOME/.kimi-code/defdo-tps-statusline",
-    "verify:opencode": "bun build opencode/tui.tsx --target bun --format esm --external '@opentui/solid' --external '@opencode-ai/plugin/tui' --external 'solid-js' --outfile /tmp/defdo-tps-opencode.js"
+    "verify:opencode": "bun build opencode/tui.tsx --target bun --format esm --external '@opentui/solid' --external '@opencode-ai/plugin/tui' --external 'solid-js' --outfile /tmp/defdo-tps-opencode.js",
+    "build:pi": "bun build pi-extension.ts --target bun --format cjs --outfile ./build/pi-extension.js",
+    "test": "bun test"
   }
 }
