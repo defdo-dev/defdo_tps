@@ -12,8 +12,29 @@
     }
   },
   "scripts": {
-    "test": "bun test",
+    "test": "bun test --preload ./node_modules/@opentui/solid/scripts/preload.js",
     "build:kimi": "bun build kimi/statusline.ts --compile --outfile $HOME/.kimi-code/defdo-tps-statusline",
-    "verify:opencode": "bun build opencode/tui.tsx --target bun --format esm --external '@opentui/solid' --external '@opencode-ai/plugin/tui' --external 'solid-js' --outfile /tmp/defdo-tps-opencode.js"
+    "build": "bun build opencode/tui.tsx --target bun --format esm --external '@opentui/solid' --external '@opencode/plugin' --external '@opencode/plugin/tui' --external 'solid-js' --outfile /tmp/defdo-tps-opencode.js",
+    "verify:opencode": "bun run typecheck && bun test --preload ./node_modules/@opentui/solid/scripts/preload.js && bun run build",
+    "format": "prettier --write --semi false --single-quote false --trailing-comma all --print-width 120 opencode/state.ts opencode/state.test.ts opencode/tui.tsx opencode/tui.test.ts",
+    "format:check": "prettier --check --semi false --single-quote false --trailing-comma all --print-width 120 opencode/state.ts opencode/state.test.ts opencode/tui.tsx opencode/tui.test.ts",
+    "typecheck": "tsc --noEmit --skipLibCheck --module ESNext --moduleResolution Bundler --target ES2022 --jsx preserve --jsxImportSource @opentui/solid opencode/state.ts opencode/state.test.ts opencode/tui.tsx opencode/tui.test.ts"
+  },
+  "dependencies": {
+    "@opencode/plugin": "2.1.4"
+  },
+  "peerDependencies": {
+    "@opentui/core": ">=0.6.6",
+    "@opentui/solid": ">=0.6.6",
+    "solid-js": ">=1.9.0"
+  },
+  "devDependencies": {
+    "@opencode/theme": "2.1.4",
+    "@opentui/core": "0.6.6",
+    "@opentui/solid": "0.6.6",
+    "@types/bun": "1.2.23",
+    "prettier": "3.6.2",
+    "solid-js": "1.9.12",
+    "typescript": "5.8.2"
   }
 }

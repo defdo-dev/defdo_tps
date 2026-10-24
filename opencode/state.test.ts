@@ -58,6 +58,7 @@ test("deleted and expired sessions cannot retain averages", () => {
     messageCount: 1,
     lastActivityAt: 100,
   }
+  tracker.lastTpsBySession["expired"] = { tps: 9.5, at: 100 }
   tracker.lastTpsBySession["deleted"] = { tps: 9.5, at: 100 }
   acceptDelta(tracker, { sessionID: "deleted", messageID: "message-2", partID: "part-2" }, "hello", 100)
 
@@ -67,4 +68,5 @@ test("deleted and expired sessions cannot retain averages", () => {
   expect(tracker.lastDeltaByPart["message-2:part-2"]).toBeUndefined()
   expect(pruneSessionAverages(tracker, 100 + SESSION_AVERAGE_TTL_MS + 1)).toBe(true)
   expect(tracker.sessionAverageByID.expired).toBeUndefined()
+  expect(tracker.lastTpsBySession.expired).toBeUndefined()
 })

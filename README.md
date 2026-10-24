@@ -9,7 +9,7 @@ the footer of coding CLIs. One repo, one adapter per CLI:
 
 | CLI | Adapter | Data source | Live streaming TPS |
 | --- | --- | --- | --- |
-| OpenCode | `opencode/tui.tsx` (TUI plugin, `session_prompt_right` slot) | OpenCode event stream (`message.part.delta`, `message.updated`) | Yes (rolling 5s window) |
+| OpenCode | `opencode/tui.tsx` (TUI plugin, `prompt.footer.status` slot) | OpenCode 2 event stream (`session.text.delta`, `session.reasoning.delta`, `session.step.*`) | Yes (rolling 5s window) |
 | Kimi Code | `kimi/statusline.ts` (`[status_line]` command) | Per-session `wire.jsonl` `step.end` events (server-side timings) | No — TPS = last completed step |
 
 ## Metrics
@@ -36,12 +36,16 @@ kimi/                Kimi Code status line (tps.ts + statusline.ts)
 
 ## OpenCode install
 
-Point `~/.config/opencode/tui.json` at the local plugin (or keep the
-published `oc-tps` entry):
+OpenCode 2 (>= 2.1.4) discovers directory plugins under
+`~/.config/opencode/plugins/` automatically. Keep a compatibility symlink at:
 
-```json
-{ "plugin": ["file:///path/to/defdo_tps/opencode"] }
+```bash
+ln -s /path/to/defdo_tps/opencode ~/.config/opencode/plugins/defdo-tps-sidebar
 ```
+
+The plugin resolves `@opencode/plugin/tui` at runtime; no config entry is
+required. (OpenCode 1 used `tui.json` plus `@opencode-ai/plugin` — that
+integration no longer exists.)
 
 ## Kimi Code install
 
@@ -63,6 +67,7 @@ adapter re-emits model/branch/plan prefix before the defdo block. Re-run
 ## Verification
 
 ```bash
+bun install
 bun test               # opencode + kimi unit tests
 bun run verify:opencode
 echo '{"model":"K3","cwd":"'$PWD'"}' | bun kimi/statusline.ts

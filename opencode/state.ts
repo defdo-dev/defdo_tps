@@ -57,14 +57,11 @@ export function acceptDelta(
   delta: { sessionID: string; messageID: string; partID: string },
   partText: string,
   at = Date.now(),
+  ttl = DELTA_DEDUPE_WINDOW_MS,
 ) {
   const key = `${delta.messageID}:${delta.partID}`
   const previous = tracker.lastDeltaByPart[key]
-  if (
-    previous?.sessionID === delta.sessionID &&
-    previous.text === partText &&
-    at - previous.at <= DELTA_DEDUPE_WINDOW_MS
-  ) {
+  if (previous?.sessionID === delta.sessionID && previous.text === partText && at - previous.at <= ttl) {
     return false
   }
 
@@ -132,6 +129,7 @@ export function pruneSessionAverages(tracker: TrackerState, now = Date.now(), tt
   for (const [sessionID, average] of Object.entries(tracker.sessionAverageByID)) {
     if (now - average.lastActivityAt <= ttl) continue
     delete tracker.sessionAverageByID[sessionID]
+    delete tracker.lastTpsBySession[sessionID]
     changed = true
   }
   return changed
