@@ -47,6 +47,18 @@ The plugin resolves `@opencode/plugin/tui` at runtime; no config entry is
 required. (OpenCode 1 used `tui.json` plus `@opencode-ai/plugin` — that
 integration no longer exists.)
 
+## Upgrading another machine (pre-0.2 / renamed repo)
+
+The repo was renamed (`defdo_opencode_tps` → `defdo_tps`) and the plugin moved
+from the repo root into `opencode/`. One command applies every fix on an old
+checkout — remote URL, symlink repoint, stale `defdo-tps` dir, dependencies:
+
+```bash
+git pull && scripts/install-opencode.sh
+```
+
+Then restart the TUI (exit + `opencode`).
+
 ## Kimi Code install
 
 ```bash
